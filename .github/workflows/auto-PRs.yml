@@ -3,7 +3,7 @@ name: Auto Create Pull Requests
 on:
   push:
     branches:
-      - main
+      - feature/*
 
 jobs:
   auto-pr:
@@ -22,15 +22,10 @@ jobs:
           echo "r/* branches: $BRANCHES"
           echo "$BRANCHES" > branches.txt
 
-      - name: Create Pull Request to each r/* branch
+      - name: Create Pull Requests to each r/* branch
         run: |
           while IFS= read -r branch; do
             echo "Creating PR for branch: $branch"
-            # Using the auto-pull-request action to create a PR for each r/* branch
-            uses: diillson/auto-pull-request@v1.0.1
-            with:
-              destination_branch: $branch
-              github_token: ${{ secrets.GITHUB_TOKEN }}
-              title: "Auto PR: ${{ github.ref_name }}"
-              body: "This PR was automatically created by GitHub Actions."
+            # Create a pull request for the current branch (r/*)
+            gh pr create --base "$branch" --head "${GITHUB_REF##*/}" --title "Auto PR: $branch" --body "This PR was automatically created by GitHub Actions."
           done < branches.txt
