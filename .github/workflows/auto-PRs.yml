@@ -1,50 +1,30 @@
-name: Auto Create Pull Requests
+name: Create Pull Request on Merge to Main
 
 on:
   push:
     branches:
-      - main
+      - main # Trigger on push to the main branch
 
 jobs:
-  auto-pr:
+  create_pull_request:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-      - name: Fetch all remote branches
+      - name: Get the base branch (r/* branch) and branch to merge (main)
+        id: branches
         run: |
-          git fetch --all
+          # Extract the base branch (r/* branch)
+          BASE_BRANCH=$(git branch -r --list 'origin/r/*' | head -n 1 | sed 's/origin\///')
+          echo "BASE_BRANCH=$BASE_BRANCH" >> $GITHUB_ENV
 
-      - name: Get all r/* branches
-        id: get_branches
-        run: |
-          BRANCHES=$(git branch -r | grep 'origin/r/' | sed 's/origin\///')
-          echo "r/* branches: $BRANCHES"
-          echo "$BRANCHES" > branches.txt
+          # The branch to merge is always `main` for this setup
+          BRANCH_TO_MERGE="main"
+          echo "BRANCH_TO_MERGE=$BRANCH_TO_MERGE" >> $GITHUB_ENV
 
-      - name: Create Pull Requests to each r/* branch
+      - name: Create pull request
+        run: gh pr create -B ${{ env.BASE_BRANCH }} -H ${{ env.BRANCH_TO_MERGE }} --title 'Merge ${{ env.BRANCH_TO_MERGE }} into ${{ env.BASE_BRANCH }}' --body 'Created by GitHub action'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Set GH_TOKEN for authentication
-        run: |
-          # Ensure we're on the main branch (the branch that triggered the workflow)
-          git checkout main
-          git pull origin main
-
-          while IFS= read -r branch; do
-            echo "Creating PR for branch: $branch"
-
-            # Ensure the r/* branch exists locally and is up to date
-            git fetch origin $branch || echo "Branch $branch not found, skipping."
-
-            # Checkout the r/* branch
-            git checkout $branch
-            git pull origin $branch
-
-            # Check for changes between the main branch and r/* branch before creating a PR
-            if git diff --quiet main..$branch; then
-              echo "No changes between main and $branch. Skipping PR creation."
-            else
-              # Create a pull request from main to r/*
-              gh pr create --base "$branch" --head "main" --title "Auto PR: Sync $branch with main" --body "This PR was automatically created by GitHub Actions."
-            fi
-          done < branches.txt
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
