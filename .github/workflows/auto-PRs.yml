@@ -26,8 +26,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Set GH_TOKEN for authentication
         run: |
+          # Ensure we're on the main branch (the branch that triggered the workflow)
+          git checkout main
+          git pull origin main
+
           while IFS= read -r branch; do
             echo "Creating PR for branch: $branch"
-            # Create a pull request for the current branch (r/*)
-            gh pr create -B "$branch" -H "${GITHUB_REF##*/}" --title "Auto PR: $branch" --body "This PR was automatically created by GitHub Actions."
+
+            # Ensure the r/* branch exists locally and is up to date
+            git checkout $branch || git checkout -b $branch origin/$branch
+            git pull origin $branch
+
+            # Check for changes between the main branch and r/* branch before creating a PR
+            if git diff --quiet main..$branch; then
+              echo "No changes between main and $branch. Skipping PR creation."
+            else
+              # Create a pull request from main to r/*
+              gh pr create --base "$branch" --head "main" --title "Auto PR: Sync $branch with main" --body "This PR was automatically created by GitHub Actions."
+            fi
           done < branches.txt
