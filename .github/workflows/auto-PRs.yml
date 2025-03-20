@@ -1,0 +1,32 @@
+name: Create Pull Requests to r/* Branches
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create-pull-requests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v2
+
+      - name: Set up GitHub CLI
+        uses: cli/cli-action@v2
+        with:
+          version: "latest"
+
+      - name: Get all r/* branches
+        run: |
+          BRANCHES=$(git branch -r | grep 'origin/r/' | sed 's/origin\///')
+          echo "Branches: $BRANCHES"
+          echo "$BRANCHES" > branches.txt
+
+      - name: Create pull requests to each r/* branch
+        run: |
+          while read branch; do
+            # Create a pull request from main to the r/* branch
+            gh pr create --base $branch --head main --title "Sync with main" --body "Automated PR to sync changes with main branch."
+          done < branches.txt
