@@ -1,4 +1,4 @@
-name: Create Pull Requests to r/* Branches
+name: Auto Create Pull Requests
 
 on:
   push:
@@ -6,50 +6,31 @@ on:
       - main
 
 jobs:
-  create-pull-requests:
+  auto-pr:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-      - name: Set up GitHub CLI
-        run: |
-          sudo apt-get update
-          sudo apt-get install gh
-
-      - name: Authenticate with GitHub CLI
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-
-      - name: Fetch all branches
+      - name: Fetch all remote branches
         run: |
           git fetch --all
 
-      - name: Ensure main is up to date
-        run: |
-          git checkout main
-          git pull origin main
-
       - name: Get all r/* branches
+        id: get_branches
         run: |
-          # List all remote r/* branches
           BRANCHES=$(git branch -r | grep 'origin/r/' | sed 's/origin\///')
-          echo "Branches: $BRANCHES"
+          echo "r/* branches: $BRANCHES"
           echo "$BRANCHES" > branches.txt
 
-      - name: Check for changes and create pull requests
+      - name: Create Pull Request to each r/* branch
         run: |
           while IFS= read -r branch; do
-            # Ensure the branch exists and is up-to-date
-            git fetch origin $branch
-            git checkout $branch
-            git pull origin $branch
-
-            # Check if there are any changes between main and r/* branch
-            git diff --quiet refs/remotes/origin/main refs/remotes/origin/$branch || (
-              echo "Changes detected between main and $branch"
-              # Create the pull request only if there are changes
-              gh pr create --base "$branch" --head "main" --title "Sync with main" --body "Automated PR to sync changes with main branch."
-            )
+            echo "Creating PR for branch: $branch"
+            # Using the auto-pull-request action to create a PR for each r/* branch
+            uses: diillson/auto-pull-request@v1.0.1
+            with:
+              destination_branch: $branch
+              github_token: ${{ secrets.GITHUB_TOKEN }}
+              title: "Auto PR: ${{ github.ref_name }}"
+              body: "This PR was automatically created by GitHub Actions."
           done < branches.txt
