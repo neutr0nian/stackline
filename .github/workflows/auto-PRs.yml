@@ -23,6 +23,8 @@ jobs:
           echo "$BRANCHES" > branches.txt
 
       - name: Create Pull Requests to each r/* branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Set GH_TOKEN for authentication
         run: |
           while IFS= read -r branch; do
             echo "Creating PR for branch: $branch"
