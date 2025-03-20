@@ -29,5 +29,5 @@ jobs:
           while IFS= read -r branch; do
             echo "Creating PR for branch: $branch"
             # Create a pull request for the current branch (r/*)
-            gh pr create --base "$branch" --head "${GITHUB_REF##*/}" --title "Auto PR: $branch" --body "This PR was automatically created by GitHub Actions."
+            gh pr create -B "$branch" -H "${GITHUB_REF##*/}" --title "Auto PR: $branch" --body "This PR was automatically created by GitHub Actions."
           done < branches.txt
