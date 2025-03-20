@@ -34,7 +34,10 @@ jobs:
             echo "Creating PR for branch: $branch"
 
             # Ensure the r/* branch exists locally and is up to date
-            git checkout $branch || git checkout -b $branch origin/$branch
+            git fetch origin $branch || echo "Branch $branch not found, skipping."
+
+            # Checkout the r/* branch
+            git checkout $branch
             git pull origin $branch
 
             # Check for changes between the main branch and r/* branch before creating a PR
